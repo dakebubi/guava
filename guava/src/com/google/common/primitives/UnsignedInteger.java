@@ -6,10 +6,10 @@
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package com.google.common.primitives;
@@ -22,11 +22,8 @@ import static com.google.common.primitives.UnsignedInts.toLong;
 
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
-
 import java.math.BigInteger;
-
-import javax.annotation.CheckReturnValue;
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A wrapper class for unsigned {@code int} values, supporting arithmetic operations.
@@ -34,14 +31,13 @@ import javax.annotation.Nullable;
  * <p>In some cases, when speed is more important than code readability, it may be faster simply to
  * treat primitive {@code int} values as unsigned, using the methods from {@link UnsignedInts}.
  *
- * <p>See the Guava User Guide article on <a href=
- * "https://github.com/google/guava/wiki/PrimitivesExplained#unsigned-support">
- * unsigned primitive utilities</a>.
+ * <p>See the Guava User Guide article on <a
+ * href="https://github.com/google/guava/wiki/PrimitivesExplained#unsigned-support">unsigned
+ * primitive utilities</a>.
  *
  * @author Louis Wasserman
  * @since 11.0
  */
-@CheckReturnValue
 @GwtCompatible(emulated = true)
 public final class UnsignedInteger extends Number implements Comparable<UnsignedInteger> {
   public static final UnsignedInteger ZERO = fromIntBits(0);
@@ -56,9 +52,9 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
   }
 
   /**
-   * Returns an {@code UnsignedInteger} corresponding to a given bit representation.
-   * The argument is interpreted as an unsigned 32-bit value. Specifically, the sign bit
-   * of {@code bits} is interpreted as a normal bit, and all other bits are treated as usual.
+   * Returns an {@code UnsignedInteger} corresponding to a given bit representation. The argument is
+   * interpreted as an unsigned 32-bit value. Specifically, the sign bit of {@code bits} is
+   * interpreted as a normal bit, and all other bits are treated as usual.
    *
    * <p>If the argument is nonnegative, the returned result will be equal to {@code bits},
    * otherwise, the result will be equal to {@code 2^32 + bits}.
@@ -72,8 +68,8 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
   }
 
   /**
-   * Returns an {@code UnsignedInteger} that is equal to {@code value},
-   * if possible.  The inverse operation of {@link #longValue()}.
+   * Returns an {@code UnsignedInteger} that is equal to {@code value}, if possible. The inverse
+   * operation of {@link #longValue()}.
    */
   public static UnsignedInteger valueOf(long value) {
     checkArgument(
@@ -84,8 +80,8 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
   }
 
   /**
-   * Returns a {@code UnsignedInteger} representing the same value as the specified
-   * {@link BigInteger}. This is the inverse operation of {@link #bigIntegerValue()}.
+   * Returns a {@code UnsignedInteger} representing the same value as the specified {@link
+   * BigInteger}. This is the inverse operation of {@link #bigIntegerValue()}.
    *
    * @throws IllegalArgumentException if {@code value} is negative or {@code value >= 2^32}
    */
@@ -99,22 +95,22 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
   }
 
   /**
-   * Returns an {@code UnsignedInteger} holding the value of the specified {@code String}, parsed
-   * as an unsigned {@code int} value.
+   * Returns an {@code UnsignedInteger} holding the value of the specified {@code String}, parsed as
+   * an unsigned {@code int} value.
    *
    * @throws NumberFormatException if the string does not contain a parsable unsigned {@code int}
-   *         value
+   *     value
    */
   public static UnsignedInteger valueOf(String string) {
     return valueOf(string, 10);
   }
 
   /**
-   * Returns an {@code UnsignedInteger} holding the value of the specified {@code String}, parsed
-   * as an unsigned {@code int} value in the specified radix.
+   * Returns an {@code UnsignedInteger} holding the value of the specified {@code String}, parsed as
+   * an unsigned {@code int} value in the specified radix.
    *
    * @throws NumberFormatException if the string does not contain a parsable unsigned {@code int}
-   *         value
+   *     value
    */
   public static UnsignedInteger valueOf(String string, int radix) {
     return fromIntBits(UnsignedInts.parseUnsignedInt(string, radix));
@@ -146,7 +142,7 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
    *
    * @since 14.0
    */
-  @GwtIncompatible("Does not truncate correctly")
+  @GwtIncompatible // Does not truncate correctly
   public UnsignedInteger times(UnsignedInteger val) {
     // TODO(lowasser): make this GWT-compatible
     return fromIntBits(value * checkNotNull(val).value);
@@ -184,9 +180,7 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
     return value;
   }
 
-  /**
-   * Returns the value of this {@code UnsignedInteger} as a {@code long}.
-   */
+  /** Returns the value of this {@code UnsignedInteger} as a {@code long}. */
   @Override
   public long longValue() {
     return toLong(value);
@@ -210,17 +204,15 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
     return longValue();
   }
 
-  /**
-   * Returns the value of this {@code UnsignedInteger} as a {@link BigInteger}.
-   */
+  /** Returns the value of this {@code UnsignedInteger} as a {@link BigInteger}. */
   public BigInteger bigIntegerValue() {
     return BigInteger.valueOf(longValue());
   }
 
   /**
-   * Compares this unsigned integer to another unsigned integer.
-   * Returns {@code 0} if they are equal, a negative number if {@code this < other},
-   * and a positive number if {@code this > other}.
+   * Compares this unsigned integer to another unsigned integer. Returns {@code 0} if they are
+   * equal, a negative number if {@code this < other}, and a positive number if {@code this >
+   * other}.
    */
   @Override
   public int compareTo(UnsignedInteger other) {
@@ -242,18 +234,16 @@ public final class UnsignedInteger extends Number implements Comparable<Unsigned
     return false;
   }
 
-  /**
-   * Returns a string representation of the {@code UnsignedInteger} value, in base 10.
-   */
+  /** Returns a string representation of the {@code UnsignedInteger} value, in base 10. */
   @Override
   public String toString() {
     return toString(10);
   }
 
   /**
-   * Returns a string representation of the {@code UnsignedInteger} value, in base {@code radix}.
-   * If {@code radix < Character.MIN_RADIX} or {@code radix > Character.MAX_RADIX}, the radix
-   * {@code 10} is used.
+   * Returns a string representation of the {@code UnsignedInteger} value, in base {@code radix}. If
+   * {@code radix < Character.MIN_RADIX} or {@code radix > Character.MAX_RADIX}, the radix {@code
+   * 10} is used.
    */
   public String toString(int radix) {
     return UnsignedInts.toString(value, radix);

@@ -68,6 +68,7 @@ import static java.lang.Double.NEGATIVE_INFINITY;
 import static java.lang.Double.NaN;
 import static java.lang.Double.POSITIVE_INFINITY;
 import static java.lang.Math.sqrt;
+import static java.util.Arrays.stream;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.StatsTesting.ManyValues;
@@ -75,15 +76,14 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.testing.EqualsTester;
 import com.google.common.testing.SerializableTester;
-
-import junit.framework.TestCase;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.DoubleSummaryStatistics;
+import junit.framework.TestCase;
 
 /**
- * Tests for {@link Stats}. This tests instances created by both {@link Stats#of} and
- * {@link StatsAccumulator#snapshot}.
+ * Tests for {@link Stats}. This tests instances created by both {@link Stats#of} and {@link
+ * StatsAccumulator#snapshot}.
  *
  * @author Pete Gillin
  */
@@ -478,7 +478,8 @@ public class StatsTest extends TestCase {
 
   public void testEqualsAndHashCode() {
     new EqualsTester()
-        .addEqualityGroup(Stats.of(1.0, 1.0, 5.0, 5.0),
+        .addEqualityGroup(
+            Stats.of(1.0, 1.0, 5.0, 5.0),
             Stats.of(1.0, 1.0, 5.0, 5.0),
             Stats.of(ImmutableList.of(1.0, 1.0, 5.0, 5.0)),
             Stats.of(ImmutableList.of(1.0, 1.0, 5.0, 5.0).iterator()),
@@ -486,8 +487,8 @@ public class StatsTest extends TestCase {
         .addEqualityGroup(Stats.of(1.0, 5.0))
         .addEqualityGroup(Stats.of(1.0, 5.0, 1.0, 6.0))
         .addEqualityGroup(Stats.of(2.0, 6.0, 2.0, 6.0))
-        .addEqualityGroup(new Stats(5, -5.5, 55.5, -5.55, 5.55),
-            new Stats(5, -5.5, 55.5, -5.55, 5.55))
+        .addEqualityGroup(
+            new Stats(5, -5.5, 55.5, -5.55, 5.55), new Stats(5, -5.5, 55.5, -5.55, 5.55))
         .addEqualityGroup(new Stats(6, -5.5, 55.5, -5.55, 5.55))
         .addEqualityGroup(new Stats(5, -5.6, 55.5, -5.55, 5.55))
         .addEqualityGroup(new Stats(5, -5.5, 55.6, -5.55, 5.55))
@@ -498,6 +499,23 @@ public class StatsTest extends TestCase {
 
   public void testSerializable() {
     SerializableTester.reserializeAndAssert(MANY_VALUES_STATS_ITERABLE);
+  }
+
+  public void testToString() {
+    assertThat(EMPTY_STATS_VARARGS.toString()).isEqualTo("Stats{count=0}");
+    assertThat(MANY_VALUES_STATS_ITERABLE.toString())
+        .isEqualTo(
+            "Stats{count="
+                + MANY_VALUES_STATS_ITERABLE.count()
+                + ", mean="
+                + MANY_VALUES_STATS_ITERABLE.mean()
+                + ", populationStandardDeviation="
+                + MANY_VALUES_STATS_ITERABLE.populationStandardDeviation()
+                + ", min="
+                + MANY_VALUES_STATS_ITERABLE.min()
+                + ", max="
+                + MANY_VALUES_STATS_ITERABLE.max()
+                + "}");
   }
 
   public void testMeanOf() {
@@ -564,7 +582,7 @@ public class StatsTest extends TestCase {
   }
 
   public void testFromByteArray_withEmptyArrayInputThrowsIllegalArgumentException() {
-   try {
+    try {
       Stats.fromByteArray(new byte[0]);
       fail("Expected IllegalArgumentException");
     } catch (IllegalArgumentException expected) {
@@ -573,8 +591,12 @@ public class StatsTest extends TestCase {
 
   public void testFromByteArray_withTooLongArrayInputThrowsIllegalArgumentException() {
     byte[] buffer = MANY_VALUES_STATS_VARARGS.toByteArray();
-    byte[] tooLongByteArray = ByteBuffer.allocate(buffer.length + 2).order(ByteOrder.LITTLE_ENDIAN)
-        .put(buffer).putChar('.').array();
+    byte[] tooLongByteArray =
+        ByteBuffer.allocate(buffer.length + 2)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .put(buffer)
+            .putChar('.')
+            .array();
     try {
       Stats.fromByteArray(tooLongByteArray);
       fail("Expected IllegalArgumentException");
@@ -584,12 +606,51 @@ public class StatsTest extends TestCase {
 
   public void testFromByteArrayWithTooShortArrayInputThrowsIllegalArgumentException() {
     byte[] buffer = MANY_VALUES_STATS_VARARGS.toByteArray();
-    byte[] tooShortByteArray = ByteBuffer.allocate(buffer.length - 1).order(ByteOrder.LITTLE_ENDIAN)
-        .put(buffer, 0, Stats.BYTES - 1).array();
+    byte[] tooShortByteArray =
+        ByteBuffer.allocate(buffer.length - 1)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .put(buffer, 0, Stats.BYTES - 1)
+            .array();
     try {
       Stats.fromByteArray(tooShortByteArray);
       fail("Expected IllegalArgumentException");
     } catch (IllegalArgumentException expected) {
+    }
+  }
+
+  public void testEquivalentStreams() {
+    // For datasets of many double values created from an array, we test many combinations of finite
+    // and non-finite values:
+    for (ManyValues values : ALL_MANY_VALUES) {
+      double[] array = values.asArray();
+      Stats stats = Stats.of(array);
+      // instance methods on Stats vs on instance methods on DoubleStream
+      assertThat(stats.count()).isEqualTo(stream(array).count());
+      assertEquivalent(stats.mean(), stream(array).average().getAsDouble());
+      assertEquivalent(stats.sum(), stream(array).sum());
+      assertEquivalent(stats.max(), stream(array).max().getAsDouble());
+      assertEquivalent(stats.min(), stream(array).min().getAsDouble());
+      // static method on Stats vs on instance method on DoubleStream
+      assertEquivalent(Stats.meanOf(array), stream(array).average().getAsDouble());
+      // instance methods on Stats vs instance methods on DoubleSummaryStatistics
+      DoubleSummaryStatistics streamStats = stream(array).summaryStatistics();
+      assertThat(stats.count()).isEqualTo(streamStats.getCount());
+      assertEquivalent(stats.mean(), streamStats.getAverage());
+      assertEquivalent(stats.sum(), streamStats.getSum());
+      assertEquivalent(stats.max(), streamStats.getMax());
+      assertEquivalent(stats.min(), streamStats.getMin());
+    }
+  }
+
+  private static void assertEquivalent(double actual, double expected) {
+    if (expected == POSITIVE_INFINITY) {
+      assertThat(actual).isPositiveInfinity();
+    } else if (expected == NEGATIVE_INFINITY) {
+      assertThat(actual).isNegativeInfinity();
+    } else if (Double.isNaN(expected)) {
+      assertThat(actual).isNaN();
+    } else {
+      assertThat(actual).isWithin(ALLOWED_ERROR).of(expected);
     }
   }
 }

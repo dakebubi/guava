@@ -14,22 +14,26 @@
 
 package com.google.common.util.concurrent;
 
+import com.google.common.annotations.GwtIncompatible;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@link FutureTask} that also implements the {@link ListenableFuture} interface.  Unlike {@code
+ * A {@link FutureTask} that also implements the {@link ListenableFuture} interface. Unlike {@code
  * FutureTask}, {@code ListenableFutureTask} does not provide an overrideable {@link
- * FutureTask#done() done()} method.  For similar functionality, call {@link #addListener}.
+ * FutureTask#done() done()} method. For similar functionality, call {@link #addListener}.
  *
- * <p>
+ * <p>Few users should use this class. It is intended primarily for those who are implementing an
+ * {@code ExecutorService}. Most users should call {@link ListeningExecutorService#submit(Callable)
+ * ListeningExecutorService.submit} on a service obtained from {@link
+ * MoreExecutors#listeningDecorator}.
  *
  * @author Sven Mawson
  * @since 1.0
  */
+@GwtIncompatible
 public class ListenableFutureTask<V> extends FutureTask<V> implements ListenableFuture<V> {
   // TODO(cpovirk): explore ways of making ListenableFutureTask final. There are some valid reasons
   // such as BoundedQueueExecutorService to allow extends but it would be nice to make it final to
@@ -76,9 +80,7 @@ public class ListenableFutureTask<V> extends FutureTask<V> implements Listenable
     executionList.add(listener, exec);
   }
 
-  /**
-   * Internal implementation detail used to invoke the listeners.
-   */
+  /** Internal implementation detail used to invoke the listeners. */
   @Override
   protected void done() {
     executionList.execute();

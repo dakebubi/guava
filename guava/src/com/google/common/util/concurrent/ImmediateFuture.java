@@ -18,26 +18,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
-
-import java.util.concurrent.CancellationException;
+import com.google.common.util.concurrent.AbstractFuture.TrustedFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import javax.annotation.Nullable;
-
-/**
- * Implementations of {@code Futures.immediate*}.
- */
+/** Implementations of {@code Futures.immediate*}. */
 @GwtCompatible(emulated = true)
 abstract class ImmediateFuture<V> implements ListenableFuture<V> {
-  /*
-   * TODO(lukes): Use AbstractFuture.TrustedFuture instead of special classes so that get() throws
-   * InterruptedException when appropriate, and, more importantly for failed/cancelled Futures, we
-   * can take advantage of the TrustedFuture optimizations.
-   */
   private static final Logger log = Logger.getLogger(ImmediateFuture.class.getName());
 
   @Override
@@ -81,24 +72,30 @@ abstract class ImmediateFuture<V> implements ListenableFuture<V> {
   }
 
   static class ImmediateSuccessfulFuture<V> extends ImmediateFuture<V> {
-    static final ImmediateSuccessfulFuture<Object> NULL =
-        new ImmediateSuccessfulFuture<Object>(null);
-    @Nullable private final V value;
+    static final ImmediateSuccessfulFuture<Object> NULL = new ImmediateSuccessfulFuture<>(null);
+    private final @Nullable V value;
 
     ImmediateSuccessfulFuture(@Nullable V value) {
       this.value = value;
     }
 
+    // TODO(lukes): Consider throwing InterruptedException when appropriate.
     @Override
     public V get() {
       return value;
     }
+
+    @Override
+    public String toString() {
+      // Behaviour analogous to AbstractFuture#toString().
+      return super.toString() + "[status=SUCCESS, result=[" + value + "]]";
+    }
   }
 
-  @GwtIncompatible("TODO")
+  @GwtIncompatible // TODO
   static class ImmediateSuccessfulCheckedFuture<V, X extends Exception> extends ImmediateFuture<V>
       implements CheckedFuture<V, X> {
-    @Nullable private final V value;
+    private final @Nullable V value;
 
     ImmediateSuccessfulCheckedFuture(@Nullable V value) {
       this.value = value;
@@ -119,41 +116,27 @@ abstract class ImmediateFuture<V> implements ListenableFuture<V> {
       checkNotNull(unit);
       return value;
     }
+
+    @Override
+    public String toString() {
+      // Behaviour analogous to AbstractFuture#toString().
+      return super.toString() + "[status=SUCCESS, result=[" + value + "]]";
+    }
   }
 
-  static class ImmediateFailedFuture<V> extends ImmediateFuture<V> {
-    private final Throwable thrown;
-
+  static final class ImmediateFailedFuture<V> extends TrustedFuture<V> {
     ImmediateFailedFuture(Throwable thrown) {
-      this.thrown = thrown;
-    }
-
-    @Override
-    public V get() throws ExecutionException {
-      throw new ExecutionException(thrown);
+      setException(thrown);
     }
   }
 
-  @GwtIncompatible("TODO")
-  static class ImmediateCancelledFuture<V> extends ImmediateFuture<V> {
-    private final CancellationException thrown;
-
+  static final class ImmediateCancelledFuture<V> extends TrustedFuture<V> {
     ImmediateCancelledFuture() {
-      this.thrown = new CancellationException("Immediate cancelled future.");
-    }
-
-    @Override
-    public boolean isCancelled() {
-      return true;
-    }
-
-    @Override
-    public V get() {
-      throw AbstractFuture.cancellationExceptionWithCause("Task was cancelled.", thrown);
+      cancel(false);
     }
   }
 
-  @GwtIncompatible("TODO")
+  @GwtIncompatible // TODO
   static class ImmediateFailedCheckedFuture<V, X extends Exception> extends ImmediateFuture<V>
       implements CheckedFuture<V, X> {
     private final X thrown;
@@ -176,6 +159,12 @@ abstract class ImmediateFuture<V> implements ListenableFuture<V> {
     public V checkedGet(long timeout, TimeUnit unit) throws X {
       checkNotNull(unit);
       throw thrown;
+    }
+
+    @Override
+    public String toString() {
+      // Behaviour analogous to AbstractFuture#toString().
+      return super.toString() + "[status=FAILURE, cause=[" + thrown + "]]";
     }
   }
 }

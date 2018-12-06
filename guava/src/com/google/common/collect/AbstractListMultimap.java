@@ -17,18 +17,17 @@
 package com.google.common.collect;
 
 import com.google.common.annotations.GwtCompatible;
-
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Basic implementation of the {@link ListMultimap} interface. It's a wrapper
- * around {@link AbstractMapBasedMultimap} that converts the returned collections into
- * {@code Lists}. The {@link #createCollection} method must return a {@code
- * List}.
+ * Basic implementation of the {@link ListMultimap} interface. It's a wrapper around {@link
+ * AbstractMapBasedMultimap} that converts the returned collections into {@code Lists}. The {@link
+ * #createCollection} method must return a {@code List}.
  *
  * @author Jared Levy
  * @since 2.0
@@ -39,8 +38,7 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
   /**
    * Creates a new multimap that uses the provided map.
    *
-   * @param map place to store the mapping from each key to its corresponding
-   *     values
+   * @param map place to store the mapping from each key to its corresponding values
    */
   protected AbstractListMultimap(Map<K, Collection<V>> map) {
     super(map);
@@ -51,7 +49,17 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
 
   @Override
   List<V> createUnmodifiableEmptyCollection() {
-    return ImmutableList.of();
+    return Collections.emptyList();
+  }
+
+  @Override
+  <E> Collection<E> unmodifiableCollectionSubclass(Collection<E> collection) {
+    return Collections.unmodifiableList((List<E>) collection);
+  }
+
+  @Override
+  Collection<V> wrapCollection(K key, Collection<V> collection) {
+    return wrapList(key, (List<V>) collection, null);
   }
 
   // Following Javadoc copied from ListMultimap.
@@ -59,9 +67,9 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
   /**
    * {@inheritDoc}
    *
-   * <p>Because the values for a given key may have duplicates and follow the
-   * insertion ordering, this method returns a {@link List}, instead of the
-   * {@link Collection} specified in the {@link Multimap} interface.
+   * <p>Because the values for a given key may have duplicates and follow the insertion ordering,
+   * this method returns a {@link List}, instead of the {@link Collection} specified in the {@link
+   * Multimap} interface.
    */
   @Override
   public List<V> get(@Nullable K key) {
@@ -71,10 +79,11 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
   /**
    * {@inheritDoc}
    *
-   * <p>Because the values for a given key may have duplicates and follow the
-   * insertion ordering, this method returns a {@link List}, instead of the
-   * {@link Collection} specified in the {@link Multimap} interface.
+   * <p>Because the values for a given key may have duplicates and follow the insertion ordering,
+   * this method returns a {@link List}, instead of the {@link Collection} specified in the {@link
+   * Multimap} interface.
    */
+  @CanIgnoreReturnValue
   @Override
   public List<V> removeAll(@Nullable Object key) {
     return (List<V>) super.removeAll(key);
@@ -83,10 +92,11 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
   /**
    * {@inheritDoc}
    *
-   * <p>Because the values for a given key may have duplicates and follow the
-   * insertion ordering, this method returns a {@link List}, instead of the
-   * {@link Collection} specified in the {@link Multimap} interface.
+   * <p>Because the values for a given key may have duplicates and follow the insertion ordering,
+   * this method returns a {@link List}, instead of the {@link Collection} specified in the {@link
+   * Multimap} interface.
    */
+  @CanIgnoreReturnValue
   @Override
   public List<V> replaceValues(@Nullable K key, Iterable<? extends V> values) {
     return (List<V>) super.replaceValues(key, values);
@@ -99,6 +109,7 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
    * @param value value to store in the multimap
    * @return {@code true} always
    */
+  @CanIgnoreReturnValue
   @Override
   public boolean put(@Nullable K key, @Nullable V value) {
     return super.put(key, value);
@@ -107,8 +118,8 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
   /**
    * {@inheritDoc}
    *
-   * <p>Though the method signature doesn't say so explicitly, the returned map
-   * has {@link List} values.
+   * <p>Though the method signature doesn't say so explicitly, the returned map has {@link List}
+   * values.
    */
   @Override
   public Map<K, Collection<V>> asMap() {
@@ -118,9 +129,8 @@ abstract class AbstractListMultimap<K, V> extends AbstractMapBasedMultimap<K, V>
   /**
    * Compares the specified object to this multimap for equality.
    *
-   * <p>Two {@code ListMultimap} instances are equal if, for each key, they
-   * contain the same values in the same order. If the value orderings disagree,
-   * the multimaps will not be considered equal.
+   * <p>Two {@code ListMultimap} instances are equal if, for each key, they contain the same values
+   * in the same order. If the value orderings disagree, the multimaps will not be considered equal.
    */
   @Override
   public boolean equals(@Nullable Object object) {

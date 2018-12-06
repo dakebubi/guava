@@ -19,7 +19,7 @@
 
 /*
  * Source:
- * http://code.google.com/p/smhasher/source/browse/trunk/MurmurHash3.cpp
+ * https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
  * (Modified to adapt to Guava coding conventions and to use the HashFunction interface)
  */
 
@@ -27,20 +27,26 @@ package com.google.common.hash;
 
 import static com.google.common.primitives.UnsignedBytes.toInt;
 
+import com.google.errorprone.annotations.Immutable;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * See http://smhasher.googlecode.com/svn/trunk/MurmurHash3.cpp
- * MurmurHash3_x64_128
+ * See MurmurHash3_x64_128 in <a href="http://smhasher.googlecode.com/svn/trunk/MurmurHash3.cpp">the
+ * C++ implementation</a>.
  *
  * @author Austin Appleby
  * @author Dimitris Andreou
  */
-final class Murmur3_128HashFunction extends AbstractStreamingHashFunction implements Serializable {
+@Immutable
+final class Murmur3_128HashFunction extends AbstractHashFunction implements Serializable {
+  static final HashFunction MURMUR3_128 = new Murmur3_128HashFunction(0);
+
+  static final HashFunction GOOD_FAST_HASH_128 =
+      new Murmur3_128HashFunction(Hashing.GOOD_FAST_HASH_SEED);
+
   // TODO(user): when the shortcuts are implemented, update BloomFilterStrategies
   private final int seed;
 

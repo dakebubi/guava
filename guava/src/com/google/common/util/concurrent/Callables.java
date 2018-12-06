@@ -16,13 +16,12 @@ package com.google.common.util.concurrent;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.Beta;
 import com.google.common.annotations.GwtCompatible;
 import com.google.common.annotations.GwtIncompatible;
 import com.google.common.base.Supplier;
-
 import java.util.concurrent.Callable;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Static utility methods pertaining to the {@link Callable} interface.
@@ -34,14 +33,34 @@ import javax.annotation.Nullable;
 public final class Callables {
   private Callables() {}
 
-  /**
-   * Creates a {@code Callable} which immediately returns a preset value each time it is called.
-   */
-  public static <T> Callable<T> returning(@Nullable final T value) {
+  /** Creates a {@code Callable} which immediately returns a preset value each time it is called. */
+  public static <T> Callable<T> returning(final @Nullable T value) {
     return new Callable<T>() {
       @Override
       public T call() {
         return value;
+      }
+    };
+  }
+
+  /**
+   * Creates an {@link AsyncCallable} from a {@link Callable}.
+   *
+   * <p>The {@link AsyncCallable} returns the {@link ListenableFuture} resulting from {@link
+   * ListeningExecutorService#submit(Callable)}.
+   *
+   * @since 20.0
+   */
+  @Beta
+  @GwtIncompatible
+  public static <T> AsyncCallable<T> asAsyncCallable(
+      final Callable<T> callable, final ListeningExecutorService listeningExecutorService) {
+    checkNotNull(callable);
+    checkNotNull(listeningExecutorService);
+    return new AsyncCallable<T>() {
+      @Override
+      public ListenableFuture<T> call() throws Exception {
+        return listeningExecutorService.submit(callable);
       }
     };
   }
@@ -55,7 +74,7 @@ public final class Callables {
    * @param nameSupplier The supplier of thread names, {@link Supplier#get get} will be called once
    *     for each invocation of the wrapped callable.
    */
-  @GwtIncompatible("threads")
+  @GwtIncompatible // threads
   static <T> Callable<T> threadRenaming(
       final Callable<T> callable, final Supplier<String> nameSupplier) {
     checkNotNull(nameSupplier);
@@ -70,7 +89,7 @@ public final class Callables {
           return callable.call();
         } finally {
           if (restoreName) {
-            trySetName(oldName, currentThread);
+            boolean unused = trySetName(oldName, currentThread);
           }
         }
       }
@@ -86,7 +105,7 @@ public final class Callables {
    * @param nameSupplier The supplier of thread names, {@link Supplier#get get} will be called once
    *     for each invocation of the wrapped callable.
    */
-  @GwtIncompatible("threads")
+  @GwtIncompatible // threads
   static Runnable threadRenaming(final Runnable task, final Supplier<String> nameSupplier) {
     checkNotNull(nameSupplier);
     checkNotNull(task);
@@ -100,7 +119,7 @@ public final class Callables {
           task.run();
         } finally {
           if (restoreName) {
-            trySetName(oldName, currentThread);
+            boolean unused = trySetName(oldName, currentThread);
           }
         }
       }
@@ -108,10 +127,10 @@ public final class Callables {
   }
 
   /** Tries to set name of the given {@link Thread}, returns true if successful. */
-  @GwtIncompatible("threads")
+  @GwtIncompatible // threads
   private static boolean trySetName(final String threadName, Thread currentThread) {
-    // In AppEngine this will always fail, should we test for that explicitly using
-    // MoreExecutors.isAppEngine.  More generally, is there a way to see if we have the modifyThread
+    // In AppEngine, this will always fail. Should we test for that explicitly using
+    // MoreExecutors.isAppEngine? More generally, is there a way to see if we have the modifyThread
     // permission without catching an exception?
     try {
       currentThread.setName(threadName);

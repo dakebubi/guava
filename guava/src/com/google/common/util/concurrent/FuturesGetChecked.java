@@ -18,13 +18,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Thread.currentThread;
 import static java.util.Arrays.asList;
 
+import com.google.common.annotations.GwtIncompatible;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Ordering;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.j2objc.annotations.J2ObjCIncompatible;
-
-import org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement;
-
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -36,20 +35,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement;
 
-import javax.annotation.Nullable;
-
-/**
- * Static methods used to implement {@link Futures#getChecked(Future, Class)}.
- */
+/** Static methods used to implement {@link Futures#getChecked(Future, Class)}. */
+@GwtIncompatible
 final class FuturesGetChecked {
+  @CanIgnoreReturnValue
   static <V, X extends Exception> V getChecked(Future<V> future, Class<X> exceptionClass) throws X {
     return getChecked(bestGetCheckedTypeValidator(), future, exceptionClass);
   }
 
-  /**
-   * Implementation of {@link Futures#getChecked(Future, Class)}.
-   */
+  /** Implementation of {@link Futures#getChecked(Future, Class)}. */
+  @CanIgnoreReturnValue
   @VisibleForTesting
   static <V, X extends Exception> V getChecked(
       GetCheckedTypeValidator validator, Future<V> future, Class<X> exceptionClass) throws X {
@@ -65,9 +63,8 @@ final class FuturesGetChecked {
     }
   }
 
-  /**
-   * Implementation of {@link Futures#getChecked(Future, Class, long, TimeUnit)}.
-   */
+  /** Implementation of {@link Futures#getChecked(Future, Class, long, TimeUnit)}. */
+  @CanIgnoreReturnValue
   static <V, X extends Exception> V getChecked(
       Future<V> future, Class<X> exceptionClass, long timeout, TimeUnit unit) throws X {
     // TODO(cpovirk): benchmark a version of this method that accepts a GetCheckedTypeValidator
@@ -106,8 +103,8 @@ final class FuturesGetChecked {
   }
 
   /**
-   * Provides a check of whether an exception type is valid for use with
-   * {@link FuturesGetChecked#getChecked(Future, Class)}, possibly using caching.
+   * Provides a check of whether an exception type is valid for use with {@link
+   * FuturesGetChecked#getChecked(Future, Class)}, possibly using caching.
    *
    * <p>Uses reflection to gracefully fall back to when certain implementations aren't available.
    */
@@ -154,7 +151,7 @@ final class FuturesGetChecked {
        * weakKeys() and concurrencyLevel(1), even up to at least 12 cached exception types.
        */
       private static final Set<WeakReference<Class<? extends Exception>>> validClasses =
-          new CopyOnWriteArraySet<WeakReference<Class<? extends Exception>>>();
+          new CopyOnWriteArraySet<>();
 
       @Override
       public void validateClass(Class<? extends Exception> exceptionClass) {
@@ -210,14 +207,14 @@ final class FuturesGetChecked {
   }
 
   /*
-   * TODO(user): FutureChecker interface for these to be static methods on? If
-   * so, refer to it in the (static-method) Futures.getChecked documentation
+   * TODO(user): FutureChecker interface for these to be static methods on? If so, refer to it in
+   * the (static-method) Futures.getChecked documentation
    */
 
   private static boolean hasConstructorUsableByGetChecked(
       Class<? extends Exception> exceptionClass) {
     try {
-      newWithCause(exceptionClass, new Exception());
+      Exception unused = newWithCause(exceptionClass, new Exception());
       return true;
     } catch (Exception e) {
       return false;
@@ -260,8 +257,7 @@ final class FuturesGetChecked {
               })
           .reverse();
 
-  @Nullable
-  private static <X> X newFromConstructor(Constructor<X> constructor, Throwable cause) {
+  private static <X> @Nullable X newFromConstructor(Constructor<X> constructor, Throwable cause) {
     Class<?>[] paramTypes = constructor.getParameterTypes();
     Object[] params = new Object[paramTypes.length];
     for (int i = 0; i < paramTypes.length; i++) {
@@ -276,13 +272,10 @@ final class FuturesGetChecked {
     }
     try {
       return constructor.newInstance(params);
-    } catch (IllegalArgumentException e) {
-      return null;
-    } catch (InstantiationException e) {
-      return null;
-    } catch (IllegalAccessException e) {
-      return null;
-    } catch (InvocationTargetException e) {
+    } catch (IllegalArgumentException
+        | InstantiationException
+        | IllegalAccessException
+        | InvocationTargetException e) {
       return null;
     }
   }

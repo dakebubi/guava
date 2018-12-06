@@ -17,19 +17,21 @@
 package com.google.common.collect;
 
 import com.google.common.annotations.GwtCompatible;
-
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A multimap which forwards all its method calls to another multimap.
- * Subclasses should override one or more methods to modify the behavior of
- * the backing multimap as desired per the <a
+ * A multimap which forwards all its method calls to another multimap. Subclasses should override
+ * one or more methods to modify the behavior of the backing multimap as desired per the <a
  * href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator pattern</a>.
+ *
+ * <p><b>{@code default} method warning:</b> This class does <i>not</i> forward calls to {@code
+ * default} methods. Instead, it inherits their default implementations. When those implementations
+ * invoke methods, they invoke methods on the {@code ForwardingMultimap}.
  *
  * @author Robert Konigsberg
  * @since 2.0
@@ -93,31 +95,37 @@ public abstract class ForwardingMultimap<K, V> extends ForwardingObject implemen
     return delegate().keySet();
   }
 
+  @CanIgnoreReturnValue
   @Override
   public boolean put(K key, V value) {
     return delegate().put(key, value);
   }
 
+  @CanIgnoreReturnValue
   @Override
   public boolean putAll(K key, Iterable<? extends V> values) {
     return delegate().putAll(key, values);
   }
 
+  @CanIgnoreReturnValue
   @Override
   public boolean putAll(Multimap<? extends K, ? extends V> multimap) {
     return delegate().putAll(multimap);
   }
 
+  @CanIgnoreReturnValue
   @Override
   public boolean remove(@Nullable Object key, @Nullable Object value) {
     return delegate().remove(key, value);
   }
 
+  @CanIgnoreReturnValue
   @Override
   public Collection<V> removeAll(@Nullable Object key) {
     return delegate().removeAll(key);
   }
 
+  @CanIgnoreReturnValue
   @Override
   public Collection<V> replaceValues(K key, Iterable<? extends V> values) {
     return delegate().replaceValues(key, values);

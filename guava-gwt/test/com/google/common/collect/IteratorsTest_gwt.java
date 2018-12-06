@@ -78,6 +78,26 @@ public void testConcatContainingNull() throws Exception {
   testCase.testConcatContainingNull();
 }
 
+public void testConcatNested_appendToBeginning() throws Exception {
+  com.google.common.collect.IteratorsTest testCase = new com.google.common.collect.IteratorsTest();
+  testCase.testConcatNested_appendToBeginning();
+}
+
+public void testConcatNested_appendToEnd() throws Exception {
+  com.google.common.collect.IteratorsTest testCase = new com.google.common.collect.IteratorsTest();
+  testCase.testConcatNested_appendToEnd();
+}
+
+public void testConcatPartiallyAdvancedFirst() throws Exception {
+  com.google.common.collect.IteratorsTest testCase = new com.google.common.collect.IteratorsTest();
+  testCase.testConcatPartiallyAdvancedFirst();
+}
+
+public void testConcatPartiallyAdvancedSecond() throws Exception {
+  com.google.common.collect.IteratorsTest testCase = new com.google.common.collect.IteratorsTest();
+  testCase.testConcatPartiallyAdvancedSecond();
+}
+
 public void testConcatVarArgsContainingNull() throws Exception {
   com.google.common.collect.IteratorsTest testCase = new com.google.common.collect.IteratorsTest();
   testCase.testConcatVarArgsContainingNull();

@@ -16,15 +16,15 @@ package com.google.common.util.concurrent;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
+import com.google.common.annotations.GwtIncompatible;
 import com.google.common.base.Preconditions;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Implementation of {@code Futures#withTimeout}.
@@ -33,41 +33,46 @@ import javax.annotation.Nullable;
  * in an {@link ExecutionException}) if the specified duration expires. The delegate future is
  * interrupted and cancelled if it times out.
  */
-final class TimeoutFuture<V> extends AbstractFuture.TrustedFuture<V> {
+@GwtIncompatible
+final class TimeoutFuture<V> extends FluentFuture.TrustedFuture<V> {
   static <V> ListenableFuture<V> create(
       ListenableFuture<V> delegate,
       long time,
       TimeUnit unit,
       ScheduledExecutorService scheduledExecutor) {
-    TimeoutFuture<V> result = new TimeoutFuture<V>(delegate);
-    TimeoutFuture.Fire<V> fire = new TimeoutFuture.Fire<V>(result);
+    TimeoutFuture<V> result = new TimeoutFuture<>(delegate);
+    Fire<V> fire = new Fire<>(result);
     result.timer = scheduledExecutor.schedule(fire, time, unit);
     delegate.addListener(fire, directExecutor());
     return result;
   }
 
-  // Memory visibility of these fields.
-  // There are two cases to consider.
-  // 1. visibility of the writes to these fields to Fire.run
-  //    The initial write to delegateRef is made definitely visible via the semantics of
-  //    addListener/SES.schedule.  The later racy write in cancel() is not guaranteed to be
-  //    observed, however that is fine since the correctness is based on the atomic state in
-  //    our base class.
-  //    The initial write to timer is never definitely visible to Fire.run since it is assigned
-  //    after SES.schedule is called. Therefore Fire.run has to check for null.  However, it
-  //    should be visible if Fire.run is called by delegate.addListener since addListener is
-  //    called after the assignment to timer, and importantly this is the main situation in which
-  //    we need to be able to see the write.
-  // 2. visibility of the writes to cancel
-  //    Since these fields are non-final that means that TimeoutFuture is not being 'safely
-  //    published', thus a motivated caller may be able to expose the reference to another thread
-  //    that would then call cancel() and be unable to cancel the delegate.
-  //    There are a number of ways to solve this, none of which are very pretty, and it is
-  //    currently believed to be a purely theoretical problem (since the other actions should
-  //    supply sufficient write-barriers).
+  /*
+   * Memory visibility of these fields. There are two cases to consider.
+   *
+   * 1. visibility of the writes to these fields to Fire.run:
+   *
+   * The initial write to delegateRef is made definitely visible via the semantics of
+   * addListener/SES.schedule. The later racy write in cancel() is not guaranteed to be observed,
+   * however that is fine since the correctness is based on the atomic state in our base class. The
+   * initial write to timer is never definitely visible to Fire.run since it is assigned after
+   * SES.schedule is called. Therefore Fire.run has to check for null. However, it should be visible
+   * if Fire.run is called by delegate.addListener since addListener is called after the assignment
+   * to timer, and importantly this is the main situation in which we need to be able to see the
+   * write.
+   *
+   * 2. visibility of the writes to an afterDone() call triggered by cancel():
+   *
+   * Since these fields are non-final that means that TimeoutFuture is not being 'safely published',
+   * thus a motivated caller may be able to expose the reference to another thread that would then
+   * call cancel() and be unable to cancel the delegate.
+   * There are a number of ways to solve this, none of which are very pretty, and it is currently
+   * believed to be a purely theoretical problem (since the other actions should supply sufficient
+   * write-barriers).
+   */
 
-  @Nullable private ListenableFuture<V> delegateRef;
-  @Nullable private Future<?> timer;
+  private @Nullable ListenableFuture<V> delegateRef;
+  private @Nullable ScheduledFuture<?> timer;
 
   private TimeoutFuture(ListenableFuture<V> delegate) {
     this.delegateRef = Preconditions.checkNotNull(delegate);
@@ -101,19 +106,26 @@ final class TimeoutFuture<V> extends AbstractFuture.TrustedFuture<V> {
        * class with a manual reference back to the "containing" class.)
        *
        * This has the nice-ish side effect of limiting reentrancy: run() calls
-       * timeoutFuture.setException() calls run(). That reentrancy would already be harmless,
-       * since timeoutFuture can be set (and delegate cancelled) only once. (And "set only once"
-       * is important for other reasons: run() can still be invoked concurrently in different
-       * threads, even with the above null checks.)
+       * timeoutFuture.setException() calls run(). That reentrancy would already be harmless, since
+       * timeoutFuture can be set (and delegate cancelled) only once. (And "set only once" is
+       * important for other reasons: run() can still be invoked concurrently in different threads,
+       * even with the above null checks.)
        */
       timeoutFutureRef = null;
       if (delegate.isDone()) {
         timeoutFuture.setFuture(delegate);
       } else {
         try {
-          // TODO(lukes): this stack trace is particularly useless (all it does is point at the
-          // scheduledexecutorservice thread), consider eliminating it altogether?
-          timeoutFuture.setException(new TimeoutException("Future timed out: " + delegate));
+          ScheduledFuture<?> timer = timeoutFuture.timer;
+          String message = "Timed out";
+          if (timer != null) {
+            long overDelayMs = Math.abs(timer.getDelay(TimeUnit.MILLISECONDS));
+            if (overDelayMs > 10) { // Not all timing drift is worth reporting
+              message += " (timeout delayed by " + overDelayMs + " ms after scheduled time)";
+            }
+          }
+          timeoutFuture.timer = null; // Don't include already elapsed delay in delegate.toString()
+          timeoutFuture.setException(new TimeoutFutureException(message + ": " + delegate));
         } finally {
           delegate.cancel(true);
         }
@@ -121,9 +133,39 @@ final class TimeoutFuture<V> extends AbstractFuture.TrustedFuture<V> {
     }
   }
 
+  private static final class TimeoutFutureException extends TimeoutException {
+    private TimeoutFutureException(String message) {
+      super(message);
+    }
+
+    @Override
+    public synchronized Throwable fillInStackTrace() {
+      setStackTrace(new StackTraceElement[0]);
+      return this; // no stack trace, wouldn't be useful anyway
+    }
+  }
+
+  @Override
+  protected String pendingToString() {
+    ListenableFuture<? extends V> localInputFuture = delegateRef;
+    ScheduledFuture<?> localTimer = timer;
+    if (localInputFuture != null) {
+      String message = "inputFuture=[" + localInputFuture + "]";
+      if (localTimer != null) {
+        final long delay = localTimer.getDelay(TimeUnit.MILLISECONDS);
+        // Negative delays look confusing in an error message
+        if (delay > 0) {
+          message += ", remaining delay=[" + delay + " ms]";
+        }
+      }
+      return message;
+    }
+    return null;
+  }
+
   @Override
   protected void afterDone() {
-    maybePropagateCancellation(delegateRef);
+    maybePropagateCancellationTo(delegateRef);
 
     Future<?> localTimer = timer;
     // Try to cancel the timer as an optimization.

@@ -1,40 +1,38 @@
 /*
  * Copyright (C) 2011 The Guava Authors
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package com.google.common.cache;
 
+import com.google.common.annotations.GwtIncompatible;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ForwardingObject;
 import com.google.common.collect.ImmutableMap;
-
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A cache which forwards all its method calls to another cache. Subclasses should override one or
- * more methods to modify the behavior of the backing cache as desired per the
- * <a href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator pattern</a>.
+ * more methods to modify the behavior of the backing cache as desired per the <a
+ * href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator pattern</a>.
  *
  * @author Charles Fry
  * @since 10.0
  */
+@GwtIncompatible
 public abstract class ForwardingCache<K, V> extends ForwardingObject implements Cache<K, V> {
 
   /** Constructor for use by subclasses. */
@@ -43,44 +41,33 @@ public abstract class ForwardingCache<K, V> extends ForwardingObject implements 
   @Override
   protected abstract Cache<K, V> delegate();
 
-  /**
-   * @since 11.0
-   */
+  /** @since 11.0 */
   @Override
-  @Nullable
-  public V getIfPresent(Object key) {
+  public @Nullable V getIfPresent(Object key) {
     return delegate().getIfPresent(key);
   }
 
-  /**
-   * @since 11.0
-   */
+  /** @since 11.0 */
   @Override
   public V get(K key, Callable<? extends V> valueLoader) throws ExecutionException {
     return delegate().get(key, valueLoader);
   }
 
-  /**
-   * @since 11.0
-   */
+  /** @since 11.0 */
   @Override
   public ImmutableMap<K, V> getAllPresent(Iterable<?> keys) {
     return delegate().getAllPresent(keys);
   }
 
-  /**
-   * @since 11.0
-   */
+  /** @since 11.0 */
   @Override
   public void put(K key, V value) {
     delegate().put(key, value);
   }
 
-  /**
-   * @since 12.0
-   */
+  /** @since 12.0 */
   @Override
-  public void putAll(Map<? extends K,? extends V> m) {
+  public void putAll(Map<? extends K, ? extends V> m) {
     delegate().putAll(m);
   }
 
@@ -89,9 +76,7 @@ public abstract class ForwardingCache<K, V> extends ForwardingObject implements 
     delegate().invalidate(key);
   }
 
-  /**
-   * @since 11.0
-   */
+  /** @since 11.0 */
   @Override
   public void invalidateAll(Iterable<?> keys) {
     delegate().invalidateAll(keys);
